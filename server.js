@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initDatabase, getAllCalls, updateCalls as dbUpdateCalls, getAllTasks, updateTasks as dbUpdateTasks } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const USE_DATABASE = !!process.env.DATABASE_URL;
 
 // Middleware
 app.use(cors());
@@ -38,9 +40,9 @@ function loadData() {
     if (fs.existsSync(DATA_FILE)) {
       const rawData = fs.readFileSync(DATA_FILE, 'utf-8');
       appData = JSON.parse(rawData);
-      console.log('Data loaded from file');
+      console.log('📁 Data loaded from file');
     } else {
-      console.log('No data file found, starting fresh');
+      console.log('📁 No data file found, starting fresh');
     }
   } catch (error) {
     console.error('Error loading data:', error);
@@ -49,16 +51,39 @@ function loadData() {
 
 // Veriyi dosyaya kaydet
 function saveData() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(appData, null, 2), 'utf-8');
-    console.log('Data saved to file');
-  } catch (error) {
-    console.error('Error saving data:', error);
+  if (!USE_DATABASE) {
+    try {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(appData, null, 2), 'utf-8');
+      console.log('📁 Data saved to file');
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
+  }
+}
+
+// Database'den veri yükle
+async function loadFromDatabase() {
+  if (USE_DATABASE) {
+    try {
+      await initDatabase();
+      const calls = await getAllCalls();
+      const tasks = await getAllTasks();
+      appData.calls = calls;
+      appData.tasks = tasks;
+      appData.lastUpdated = Date.now();
+      console.log(`🗄️  Loaded ${calls.length} calls and ${tasks.length} tasks from database`);
+    } catch (error) {
+      console.error('❌ Error loading from database:', error);
+    }
   }
 }
 
 // Sunucu başlatıldığında veriyi yükle
-loadData();
+if (USE_DATABASE) {
+  await loadFromDatabase();
+} else {
+  loadData();
+}
 
 // HTTP Server
 const server = createServer(app);
@@ -95,7 +120,14 @@ wss.on('connection', (ws) => {
         case 'UPDATE_CALLS':
           appData.calls = data.calls;
           appData.lastUpdated = Date.now();
-          saveData();
+
+          // Database veya dosyaya kaydet
+          if (USE_DATABASE) {
+            dbUpdateCalls(data.calls).catch(err => console.error('DB update error:', err));
+          } else {
+            saveData();
+          }
+
           // Diğer clientlara broadcast
           broadcast({
             type: 'CALLS_UPDATED',
@@ -107,7 +139,14 @@ wss.on('connection', (ws) => {
         case 'UPDATE_TASKS':
           appData.tasks = data.tasks;
           appData.lastUpdated = Date.now();
-          saveData();
+
+          // Database veya dosyaya kaydet
+          if (USE_DATABASE) {
+            dbUpdateTasks(data.tasks).catch(err => console.error('DB update error:', err));
+          } else {
+            saveData();
+          }
+
           // Diğer clientlara broadcast
           broadcast({
             type: 'TASKS_UPDATED',
@@ -150,11 +189,17 @@ app.get('/api/calls', (req, res) => {
 });
 
 // Calls verilerini güncelle
-app.post('/api/calls', (req, res) => {
+app.post('/api/calls', async (req, res) => {
   try {
     appData.calls = req.body.calls || [];
     appData.lastUpdated = Date.now();
-    saveData();
+
+    // Database veya dosyaya kaydet
+    if (USE_DATABASE) {
+      await dbUpdateCalls(appData.calls);
+    } else {
+      saveData();
+    }
 
     // WebSocket üzerinden broadcast
     broadcast({
@@ -175,11 +220,17 @@ app.get('/api/tasks', (req, res) => {
 });
 
 // Tasks verilerini güncelle
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', async (req, res) => {
   try {
     appData.tasks = req.body.tasks || [];
     appData.lastUpdated = Date.now();
-    saveData();
+
+    // Database veya dosyaya kaydet
+    if (USE_DATABASE) {
+      await dbUpdateTasks(appData.tasks);
+    } else {
+      saveData();
+    }
 
     // WebSocket üzerinden broadcast
     broadcast({
@@ -209,6 +260,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`   Network: http://192.168.1.17:${PORT}`);
   }
   console.log(`   Mode:    ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  console.log(`   Storage: ${USE_DATABASE ? 'PostgreSQL 🗄️' : 'File System 📁'}`);
   console.log(`\n📡 WebSocket server is ready for connections\n`);
 });
 
