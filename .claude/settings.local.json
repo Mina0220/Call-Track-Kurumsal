@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npx eslint:*)",
+      "Bash(cat:*)",
+      "Bash(node -e:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(ipconfig:*)",
+      "Bash(chmod:*)",
+      "Bash(npm run network:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:full:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

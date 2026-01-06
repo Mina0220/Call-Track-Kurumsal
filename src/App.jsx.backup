@@ -1,0 +1,1621 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Phone,
+  Calendar,
+  User,
+  Building,
+  MapPin,
+  Briefcase,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BarChart3,
+  List,
+  Trash2,
+  PieChart,
+  FileText,
+  Search,
+  Smartphone,
+  UserCircle,
+  Download,
+  CalendarDays,
+  Edit,
+  Filter,
+  X,
+  Bell,
+  AlertTriangle,
+  Upload,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Activity,
+  Target,
+  Moon,
+  Sun,
+  Settings,
+  Zap,
+  Star,
+  Award,
+  ThumbsUp,
+  Eye,
+  Sparkles,
+  Flame,
+  TrendingDown,
+  RefreshCw,
+  Copy,
+  Share2,
+  Mail,
+  Grid,
+  LayoutGrid
+} from 'lucide-react';
+
+// --- SABİT VERİLER ---
+const CALLERS = ["Aysun", "Hülya", "Mert", "Tuğbahan", "Yakup"];
+
+// --- İL ve İLÇE VERİTABANI ---
+const CITIES_DATA = {
+  "Adana": ["Seyhan", "Yüreğir", "Çukurova", "Sarıçam", "Ceyhan", "Kozan", "İmamoğlu", "Karataş", "Karaisalı", "Pozantı", "Yumurtalık", "Tufanbeyli", "Feke", "Aladağ", "Saimbeyli"],
+  "Adıyaman": ["Merkez", "Kahta", "Besni", "Gölbaşı", "Gerger", "Sincik", "Çelikhan", "Tut", "Samsat"],
+  "Afyonkarahisar": ["Merkez", "Sandıklı", "Dinar", "Bolvadin", "Sinanpaşa", "Emirdağ", "Şuhut", "Çay", "İhsaniye", "İscehisar", "Sultandağı", "Çobanlar", "Dazkırı", "Başmakçı", "Evciler", "Bayat", "Hocalar", "Kızılören"],
+  "Ağrı": ["Merkez", "Patnos", "Doğubayazıt", "Diyadin", "Eleşkirt", "Tutak", "Taşlıçay", "Hamur"],
+  "Aksaray": ["Merkez", "Ortaköy", "Eskil", "Gülağaç", "Güzelyurt", "Ağaçören", "Sarıyahşi"],
+  "Amasya": ["Merkez", "Merzifon", "Suluova", "Taşova", "Gümüşhacıköy", "Göynücek", "Hamamözü"],
+  "Ankara": ["Çankaya", "Keçiören", "Yenimahalle", "Mamak", "Etimesgut", "Sincan", "Altındağ", "Pursaklar", "Gölbaşı", "Polatlı", "Çubuk", "Kahramankazan", "Beypazarı", "Elmadağ", "Şereflikoçhisar", "Akyurt", "Nallıhan", "Haymana", "Kızılcahamam", "Bala", "Kalecik", "Ayaş", "Güdül", "Çamlıdere", "Evren"],
+  "Antalya": ["Kepez", "Muratpaşa", "Alanya", "Manavgat", "Konyaaltı", "Serik", "Aksu", "Döşemealtı", "Kumluca", "Kaş", "Korkuteli", "Gazipaşa", "Finike", "Kemer", "Elmalı", "Demre", "Akseki", "Gündoğmuş", "İbradı"],
+  "Ardahan": ["Merkez", "Göle", "Çıldır", "Hanak", "Posof", "Damal"],
+  "Artvin": ["Merkez", "Hopa", "Borçka", "Yusufeli", "Arhavi", "Şavşat", "Murgul", "Ardanuç", "Kemalpaşa"],
+  "Aydın": ["Efeler", "Nazilli", "Söke", "Kuşadası", "Didim", "Germencik", "İncirliova", "Çine", "Köşk", "Kuyucak", "Bozdoğan", "Sultanhisar", "Karacasu", "Yenipazar", "Buharkent", "Karpuzlu"],
+  "Balıkesir": ["Altıeylül", "Karesi", "Edremit", "Bandırma", "Gönen", "Ayvalık", "Burhaniye", "Bigadiç", "Susurluk", "Dursunbey", "Sındırgı", "İvrindi", "Erdek", "Havran", "Kepsut", "Manyas", "Savaştepe", "Balya", "Gömeç", "Marmara"],
+  "Bartın": ["Merkez", "Ulus", "Amasra", "Kurucaşile"],
+  "Batman": ["Merkez", "Kozluk", "Sason", "Beşiri", "Gercüş", "Hasankeyf"],
+  "Bayburt": ["Merkez", "Demirözü", "Aydıntepe"],
+  "Bilecik": ["Merkez", "Bozüyük", "Osmaneli", "Söğüt", "Gölpazarı", "Pazaryeri", "İnhisar", "Yenipazar"],
+  "Bingöl": ["Merkez", "Genç", "Solhan", "Karlıova", "Adaklı", "Kiğı", "Yedisu", "Yayladere"],
+  "Bitlis": ["Tatvan", "Merkez", "Güroymak", "Ahlat", "Hizan", "Mutki", "Adilcevaz"],
+  "Bolu": ["Merkez", "Gerede", "Mudurnu", "Göynük", "Mengen", "Yeniçağa", "Dörtdivan", "Seben", "Kıbrıscık"],
+  "Burdur": ["Merkez", "Bucak", "Gölhisar", "Yeşilova", "Çavdır", "Tefenni", "Ağlasun", "Karamanlı", "Altınyayla", "Çeltikçi", "Kemer"],
+  "Bursa": ["Osmangazi", "Yıldırım", "Nilüfer", "İnegöl", "Gemlik", "Mustafakemalpaşa", "Mudanya", "Gürsu", "Karacabey", "Orhangazi", "Kestel", "Yenişehir", "İznik", "Orhaneli", "Keles", "Büyükorhan", "Harmancık"],
+  "Çanakkale": ["Merkez", "Biga", "Çan", "Gelibolu", "Ayvacık", "Yenice", "Ezine", "Bayramiç", "Lapseki", "Eceabat", "Gökçeada", "Bozcaada"],
+  "Çankırı": ["Merkez", "Çerkeş", "Ilgaz", "Orta", "Şabanözü", "Kurşunlu", "Yapraklı", "Kızılırmak", "Eldivan", "Atkaracalar", "Korgun", "Bayramören"],
+  "Çorum": ["Merkez", "Sungurlu", "Osmancık", "İskilip", "Alaca", "Bayat", "Mecitözü", "Kargı", "Ortaköy", "Uğurludağ", "Dodurga", "Oğuzlar", "Laçin", "Boğazkale"],
+  "Denizli": ["Pamukkale", "Merkezefendi", "Çivril", "Acıpayam", "Tavas", "Honaz", "Sarayköy", "Buldan", "Kale", "Çal", "Çameli", "Serinhisar", "Bozkurt", "Güney", "Çardak", "Bekilli", "Beyağaç", "Babadağ", "Baklan"],
+  "Diyarbakır": ["Bağlar", "Kayapınar", "Yenişehir", "Sur", "Ergani", "Bismil", "Silvan", "Çınar", "Çermik", "Dicle", "Kulp", "Hani", "Lice", "Eğil", "Hazro", "Kocaköy", "Çüngüş"],
+  "Düzce": ["Merkez", "Akçakoca", "Kaynaşlı", "Gölyaka", "Çilimli", "Yığılca", "Gümüşova", "Cumayeri"],
+  "Edirne": ["Merkez", "Keşan", "Uzunköprü", "İpsala", "Havsa", "Meriç", "Enez", "Süloğlu", "Lalapaşa"],
+  "Elazığ": ["Merkez", "Kovancılar", "Karakoçan", "Palu", "Arıcak", "Baskil", "Maden", "Sivrice", "Alacakaya", "Keban", "Ağın"],
+  "Erzincan": ["Merkez", "Tercan", "Üzümlü", "Çayırlı", "İliç", "Kemah", "Kemaliye", "Otlukbeli", "Refahiye"],
+  "Erzurum": ["Yakutiye", "Palandöken", "Aziziye", "Horasan", "Oltu", "Pasinler", "Karayazı", "Hınıs", "Tekman", "Karaçoban", "Aşkale", "Şenkaya", "Çat", "Köprüköy", "İspir", "Tortum", "Narman", "Uzundere", "Olur", "Pazaryolu"],
+  "Eskişehir": ["Odunpazarı", "Tepebaşı", "Sivrihisar", "Çifteler", "Seyitgazi", "Alpu", "Mihalıççık", "Mahmudiye", "Beylikova", "İnönü", "Günyüzü", "Sarıcakaya", "Mihalgazi", "Han"],
+  "Gaziantep": ["Şahinbey", "Şehitkamil", "Nizip", "İslahiye", "Nurdağı", "Araban", "Oğuzeli", "Yavuzeli", "Karkamış"],
+  "Giresun": ["Merkez", "Bulancak", "Espiye", "Görele", "Tirebolu", "Dereli", "Yağlıdere", "Keşap", "Eynesil", "Şebinkarahisar", "Piraziz", "Güce", "Çamoluk", "Doğankent", "Alucra", "Çanakçı"],
+  "Gümüşhane": ["Merkez", "Kelkit", "Şiran", "Kürtün", "Torul", "Köse"],
+  "Hakkari": ["Yüksekova", "Merkez", "Şemdinli", "Çukurca", "Derecik"],
+  "Hatay": ["Antakya", "İskenderun", "Defne", "Dörtyol", "Samandağ", "Kırıkhan", "Reyhanlı", "Arsuz", "Altınözü", "Hassa", "Payas", "Erzin", "Yayladağı", "Belen", "Kumlu"],
+  "Iğdır": ["Merkez", "Tuzluca", "Aralık", "Karakoyunlu"],
+  "Isparta": ["Merkez", "Yalvaç", "Eğirdir", "Şarkikaraağaç", "Gelendost", "Keçiborlu", "Senirkent", "Sütçüler", "Gönen", "Uluborlu", "Atabey", "Aksu", "Yenişarbademli"],
+  "İstanbul": ["Esenyurt", "Küçükçekmece", "Bağcılar", "Pendik", "Ümraniye", "Bahçelievler", "Sultangazi", "Maltepe", "Üsküdar", "Gaziosmanpaşa", "Kadıköy", "Kartal", "Başakşehir", "Esenler", "Avcılar", "Kağıthane", "Fatih", "Sancaktepe", "Ataşehir", "Eyüpsultan", "Beylikdüzü", "Sarıyer", "Sultanbeyli", "Zeytinburnu", "Güngören", "Arnavutköy", "Şişli", "Bayrampaşa", "Tuzla", "Çekmeköy", "Büyükçekmece", "Beykoz", "Beyoğlu", "Bakırköy", "Silivri", "Beşiktaş", "Çatalca", "Şile", "Adalar"],
+  "İzmir": ["Buca", "Karabağlar", "Bornova", "Konak", "Karşıyaka", "Bayraklı", "Çiğli", "Torbalı", "Menemen", "Gaziemir", "Ödemiş", "Kemalpaşa", "Bergama", "Aliağa", "Menderes", "Tire", "Balçova", "Narlıdere", "Urla", "Kiraz", "Dikili", "Bayındır", "Seferihisar", "Selçuk", "Güzelbahçe", "Foça", "Kınık", "Beydağ", "Karaburun"],
+  "Kahramanmaraş": ["Onikişubat", "Dulkadiroğlu", "Elbistan", "Afşin", "Türkoğlu", "Pazarcık", "Göksun", "Andırın", "Çağlayancerit", "Nurhak", "Ekinözü"],
+  "Karabük": ["Merkez", "Safranbolu", "Yenice", "Eskipazar", "Eflani", "Ovacık"],
+  "Karaman": ["Merkez", "Ermenek", "Sarıveliler", "Ayrancı", "Kazımkarabekir", "Başyayla"],
+  "Kars": ["Merkez", "Kağızman", "Sarıkamış", "Selim", "Digor", "Arpaçay", "Akyaka", "Susuz"],
+  "Kastamonu": ["Merkez", "Tosya", "Taşköprü", "Cide", "İnebolu", "Araç", "Devrekani", "Bozkurt", "Daday", "Azdavay", "Çatalzeytin", "Küre", "Doğanyurt", "İhsangazi", "Pınarbaşı", "Şenpazar", "Abana", "Seydiler", "Hanönü", "Ağlı"],
+  "Kayseri": ["Melikgazi", "Kocasinan", "Talas", "Develi", "Yahyalı", "Bünyan", "İncesu", "Pınarbaşı", "Tomarza", "Yeşilhisar", "Sarıoğlan", "Hacılar", "Sarız", "Akkışla", "Felahiye", "Özvatan"],
+  "Kırıkkale": ["Merkez", "Yahşihan", "Keskin", "Delice", "Bahşılı", "Sulakyurt", "Balışeyh", "Karakeçili", "Çelebi"],
+  "Kırklareli": ["Lüleburgaz", "Merkez", "Babaeski", "Vize", "Pınarhisar", "Demirköy", "Pehlivanköy", "Kofçaz"],
+  "Kırşehir": ["Merkez", "Kaman", "Mucur", "Çiçekdağı", "Akpınar", "Boztepe", "Akçakent"],
+  "Kilis": ["Merkez", "Musabeyli", "Elbeyli", "Polateli"],
+  "Kocaeli": ["Gebze", "İzmit", "Darıca", "Körfez", "Gölcük", "Derince", "Çayırova", "Kartepe", "Başiskele", "Karamürsel", "Kandıra", "Dilovası"],
+  "Konya": ["Selçuklu", "Meram", "Karatay", "Ereğli", "Akşehir", "Beyşehir", "Çumra", "Seydişehir", "Ilgın", "Cihanbeyli", "Kulu", "Karapınar", "Kadınhanı", "Sarayönü", "Bozkır", "Yunak", "Doğanhisar", "Hüyük", "Altınekin", "Hadim", "Çeltik", "Güneysınır", "Emirgazi", "Taşkent", "Tuzlukçu", "Derebucak", "Akören", "Ahırlı", "Halkapınar", "Yalıhüyük"],
+  "Kütahya": ["Merkez", "Tavşanlı", "Simav", "Gediz", "Emet", "Altıntaş", "Domaniç", "Hisarcık", "Aslanapa", "Çavdarhisar", "Şaphane", "Pazarlar", "Dumlupınar"],
+  "Malatya": ["Battalgazi", "Yeşilyurt", "Doğanşehir", "Akçadağ", "Darende", "Hekimhan", "Yazıhan", "Pütürge", "Arapgir", "Kuluncak", "Arguvan", "Kale", "Doğanyol"],
+  "Manisa": ["Yunusemre", "Şehzadeler", "Akhisar", "Turgutlu", "Salihli", "Soma", "Alaşehir", "Saruhanlı", "Kula", "Kırkağaç", "Demirci", "Sarıgöl", "Gördes", "Selendi", "Ahmetli", "Gölmarmara", "Köprübaşı"],
+  "Mardin": ["Kızıltepe", "Artuklu", "Midyat", "Nusaybin", "Derik", "Mazıdağı", "Dargeçit", "Savur", "Yeşilli", "Ömerli"],
+  "Mersin": ["Tarsus", "Toroslar", "Yenişehir", "Akdeniz", "Mezitli", "Erdemli", "Silifke", "Anamur", "Mut", "Bozyazı", "Gülnar", "Aydıncık", "Çamlıyayla"],
+  "Muğla": ["Bodrum", "Fethiye", "Milas", "Menteşe", "Marmaris", "Seydikemer", "Ortaca", "Dalaman", "Yatağan", "Köyceğiz", "Ula", "Datça", "Kavaklıdere"],
+  "Muş": ["Merkez", "Bulanık", "Malazgirt", "Varto", "Hasköy", "Korkut"],
+  "Nevşehir": ["Merkez", "Ürgüp", "Avanos", "Gülşehir", "Derinkuyu", "Acıgöl", "Kozaklı", "Hacıbektaş"],
+  "Niğde": ["Merkez", "Bor", "Çiftlik", "Ulukışla", "Altunhisar", "Çamardı"],
+  "Ordu": ["Altınordu", "Ünye", "Fatsa", "Gölköy", "Perşembe", "Kumru", "Korgan", "Akkuş", "Aybastı", "Ulubey", "İkizce", "Mesudiye", "Gürgentepe", "Çatalpınar", "Çaybaşı", "Kabataş", "Kabadüz", "Çamaş", "Gülyalı"],
+  "Osmaniye": ["Merkez", "Kadirli", "Düziçi", "Bahçe", "Toprakkale", "Sumbas", "Hasanbeyli"],
+  "Rize": ["Merkez", "Çayeli", "Ardeşen", "Pazar", "Fındıklı", "Güneysu", "Kalkandere", "İyidere", "Derepazarı", "Çamlıhemşin", "İkizdere", "Hemşin"],
+  "Sakarya": ["Adapazarı", "Serdivan", "Akyazı", "Erenler", "Hendek", "Karasu", "Geyve", "Arifiye", "Sapanca", "Pamukova", "Ferizli", "Kaynarca", "Kocaali", "Söğütlü", "Karapürçek", "Taraklı"],
+  "Samsun": ["İlkadım", "Atakum", "Bafra", "Çarşamba", "Canik", "Vezirköprü", "Terme", "Tekkeköy", "Havza", "Alaçam", "19 Mayıs", "Kavak", "Salıpazarı", "Ayvacık", "Asarcık", "Ladik", "Yakakent"],
+  "Siirt": ["Merkez", "Kurtalan", "Pervari", "Baykan", "Şirvan", "Eruh", "Tillo"],
+  "Sinop": ["Merkez", "Boyabat", "Gerze", "Ayancık", "Durağan", "Türkeli", "Erfelek", "Dikmen", "Saraydüzü"],
+  "Sivas": ["Merkez", "Şarkışla", "Yıldızeli", "Suşehri", "Gemerek", "Zara", "Kangal", "Gürün", "Divriği", "Koyulhisar", "Hafik", "Ulaş", "Altınyayla", "İmranlı", "Akıncılar", "Gölova", "Doğanşar"],
+  "Şanlıurfa": ["Eyyübiye", "Haliliye", "Siverek", "Viranşehir", "Karaköprü", "Akçakale", "Suruç", "Birecik", "Harran", "Ceylanpınar", "Bozova", "Hilvan", "Halfeti"],
+  "Şırnak": ["Cizre", "Silopi", "Merkez", "İdil", "Uludere", "Beytüşşebap", "Güçlükonak"],
+  "Tekirdağ": ["Çorlu", "Süleymanpaşa", "Çerkezköy", "Kapaklı", "Ergene", "Malkara", "Saray", "Hayrabolu", "Şarköy", "Muratlı", "Marmaraereğlisi"],
+  "Tokat": ["Merkez", "Erbaa", "Turhal", "Niksar", "Zile", "Reşadiye", "Almus", "Pazar", "Başçiftlik", "Yeşilyurt", "Artova", "Sulusaray"],
+  "Trabzon": ["Ortahisar", "Akçaabat", "Araklı", "Of", "Yomra", "Arsin", "Vakfıkebir", "Sürmene", "Maçka", "Beşikdüzü", "Çarşıbaşı", "Tonya", "Düzköy", "Çaykara", "Şalpazarı", "Hayrat", "Köprübaşı", "Dernekpazarı"],
+  "Tunceli": ["Merkez", "Pertek", "Mazgirt", "Çemişgezek", "Hozat", "Ovacık", "Pülümür", "Nazımiye"],
+  "Uşak": ["Merkez", "Banaz", "Eşme", "Sivaslı", "Ulubey", "Karahallı"],
+  "Van": ["İpekyolu", "Erciş", "Tuşba", "Edremit", "Özalp", "Çaldıran", "Başkale", "Muradiye", "Gürpınar", "Gevaş", "Saray", "Çatak", "Bahçesaray"],
+  "Yalova": ["Merkez", "Çiftlikköy", "Çınarcık", "Altınova", "Armutlu", "Termal"],
+  "Yozgat": ["Merkez", "Sorgun", "Akdağmadeni", "Yerköy", "Boğazlıyan", "Sarıkaya", "Çekerek", "Şefaatli", "Saraykent", "Çayıralan", "Kadışehri", "Aydıncık", "Yenifakılı", "Çandır"],
+  "Zonguldak": ["Ereğli", "Merkez", "Çaycuma", "Devrek", "Kozlu", "Alaplı", "Kilimli", "Gökçebey"]
+};
+
+// --- YARDIMCI FONKSİYONLAR ---
+
+// Telefon Numarası Formatlayıcı: (555) 123 45 67
+const formatPhoneNumber = (value) => {
+  if (!value) return value;
+  
+  // Sadece rakamları al
+  const phoneNumber = value.replace(/[^\d]/g, '');
+  const phoneNumberLength = phoneNumber.length;
+
+  if (phoneNumberLength < 4) return phoneNumber;
+  if (phoneNumberLength < 7) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  }
+  return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6, 10)}`;
+};
+
+// --- Yardımcı Bileşenler ---
+
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
+    {children}
+  </div>
+);
+
+const Badge = ({ children, type }) => {
+  const styles = {
+    success: "bg-green-100 text-green-700",
+    warning: "bg-yellow-100 text-yellow-700",
+    danger: "bg-red-100 text-red-700",
+    neutral: "bg-slate-100 text-slate-700",
+    blue: "bg-blue-100 text-blue-700"
+  };
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[type] || styles.neutral}`}>
+      {children}
+    </span>
+  );
+};
+
+// --- Sabitler ---
+const HOURS = Array.from({ length: 10 }, (_, i) => (i + 9).toString().padStart(2, '0')); // 09 - 18
+const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')); // 00 - 59
+const ITEMS_PER_PAGE = 25; // Pagination için sayfa başına kayıt sayısı
+
+// --- Ana Uygulama ---
+
+export default function App() {
+  // Durum Yönetimi (State)
+  const [activeTab, setActiveTab] = useState('entry'); // entry, list, reports
+  const [calls, setCalls] = useState(() => {
+    const saved = localStorage.getItem('companyCalls');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // Arama ve Filtreleme State'leri
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterResult, setFilterResult] = useState('');
+  const [filterCaller, setFilterCaller] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterDateRange, setFilterDateRange] = useState({ start: '', end: '' });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Düzenleme (Edit) State'i
+  const [editingId, setEditingId] = useState(null);
+
+  // Notification State
+  const [notification, setNotification] = useState(null);
+
+  // Dark Mode State
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // View Mode State (grid vs list)
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+
+  // Quick Stats State
+  const [showQuickStats, setShowQuickStats] = useState(true);
+
+  const [formData, setFormData] = useState({
+    caller: '', 
+    companyName: '',
+    callDate: new Date().toISOString().split('T')[0], 
+    callTime: (() => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      let hour = currentHour;
+      let minute = now.getMinutes(); 
+      if (currentHour < 9) { hour = 9; minute = 0; }
+      else if (currentHour > 18 || (currentHour === 18 && minute > 0)) { hour = 18; minute = 0; }
+      return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    })(),
+    contactPerson: '',
+    contactTitle: '',
+    contactPhone: '',
+    newContactPhone: '',
+    industry: '',
+    city: '',
+    district: '',
+    result: 'Görüşüldü',
+    notes: ''
+  });
+
+  // Veriler değiştikçe kaydet
+  useEffect(() => {
+    localStorage.setItem('companyCalls', JSON.stringify(calls));
+  }, [calls]);
+
+  // Dark Mode kaydet
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Notification auto-hide
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Show Notification Helper
+  const showNotification = useCallback((message, type = 'success') => {
+    setNotification({ message, type });
+  }, []);
+
+  // Toggle Dark Mode
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+    showNotification(darkMode ? 'Aydınlık mod aktif' : 'Karanlık mod aktif', 'success');
+  }, [darkMode, showNotification]);
+
+  // Veri Yedekleme (Backup)
+  const backupData = useCallback(() => {
+    const dataStr = JSON.stringify(calls, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `CallTrack_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showNotification('Veri yedeği başarıyla indirildi!', 'success');
+  }, [calls, showNotification]);
+
+  // Veri Geri Yükleme (Restore)
+  const restoreData = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (Array.isArray(data)) {
+          setCalls(data);
+          showNotification(`${data.length} kayıt başarıyla geri yüklendi!`, 'success');
+        } else {
+          showNotification('Geçersiz dosya formatı!', 'error');
+        }
+      } catch (error) {
+        showNotification('Dosya okuma hatası!', 'error');
+      }
+    };
+    reader.readAsText(file);
+  }, [showNotification]);
+
+  // Excel'e Aktarma Fonksiyonu
+  const exportToExcel = (dataToExport = calls, fileNamePrefix = "Tum_Arama_Kayitlari") => {
+    if (dataToExport.length === 0) {
+      alert("Dışa aktarılacak kayıt bulunamadı.");
+      return;
+    }
+
+    const headers = ["ID", "Tarih", "Saat", "Personel", "Firma Adı", "Sektör", "İl", "İlçe", "İlgili Kişi", "Unvan", "Telefon", "Yeni Telefon", "Sonuç", "Notlar"];
+    
+    const csvContent = [
+      headers.join(";"), 
+      ...dataToExport.map(call => [
+        call.id,
+        call.callDate,
+        call.callTime,
+        `"${call.caller || ''}"`,
+        `"${call.companyName || ''}"`,
+        `"${call.industry || ''}"`,
+        `"${call.city || ''}"`,
+        `"${call.district || ''}"`,
+        `"${call.contactPerson || ''}"`,
+        `"${call.contactTitle || ''}"`,
+        `"${call.contactPhone || ''}"`,
+        `"${call.newContactPhone || ''}"`,
+        `"${call.result || ''}"`,
+        `"${(call.notes || '').replace(/(\r\n|\n|\r)/gm, " ")}"`
+      ].join(";"))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${fileNamePrefix}_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Form İşlemleri
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'city') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        district: '' 
+      }));
+    } 
+    // Telefon Formatlama İşlemi
+    else if (name === 'contactPhone' || name === 'newContactPhone') {
+      const formatted = formatPhoneNumber(value);
+      // Maksimum uzunluk kontrolü (15 karakter: (555) 123 45 67)
+      if (formatted.length <= 15) {
+        setFormData(prev => ({ ...prev, [name]: formatted }));
+      }
+    }
+    else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleTimeChange = (type, value) => {
+    setFormData(prev => {
+      const [currentHour, currentMinute] = prev.callTime.split(':');
+      let newTime;
+      if (type === 'hour') {
+        newTime = `${value}:${currentMinute}`;
+      } else {
+        newTime = `${currentHour}:${value}`;
+      }
+      return { ...prev, callTime: newTime };
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Validation
+    if (!formData.caller || !formData.companyName || !formData.contactPerson) {
+      showNotification('Lütfen tüm gerekli alanları doldurunuz!', 'error');
+      return;
+    }
+
+    if (editingId) {
+      // DÜZENLEME MODU
+      setCalls(calls.map(call =>
+        call.id === editingId ? { ...formData, id: editingId, createdAt: call.createdAt } : call
+      ));
+      showNotification('Kayıt başarıyla güncellendi!', 'success');
+      setEditingId(null);
+    } else {
+      // YENİ KAYIT MODU
+      const newCall = {
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        ...formData
+      };
+      setCalls([newCall, ...calls]);
+      showNotification('Arama kaydı başarıyla eklendi!', 'success');
+    }
+
+    // Formu sıfırla
+    setFormData({
+      ...formData,
+      companyName: '',
+      contactPerson: '',
+      contactTitle: '',
+      contactPhone: '',
+      newContactPhone: '',
+      industry: '',
+      city: '',
+      district: '',
+      result: 'Görüşüldü',
+      notes: ''
+    });
+  };
+
+  // Düzenleme Başlatma
+  const handleEdit = (call) => {
+    setFormData(call);
+    setEditingId(call.id);
+    setActiveTab('entry'); // Form sekmesine git
+    window.scrollTo(0,0);
+  };
+
+  // Düzenleme İptal
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      ...formData,
+      companyName: '',
+      contactPerson: '',
+      contactTitle: '',
+      contactPhone: '',
+      newContactPhone: '',
+      industry: '',
+      city: '',
+      district: '',
+      result: 'Görüşüldü',
+      notes: ''
+    });
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Bu kaydı silmek istediğinize emin misiniz?")) {
+      setCalls(calls.filter(call => call.id !== id));
+    }
+  };
+
+  // --- Filtreleme Mantığı ---
+  const filteredCalls = useMemo(() => {
+    let filtered = calls.filter(call => {
+      const matchesSearch =
+        (call.companyName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (call.contactPerson?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (call.caller?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (call.contactPhone?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (call.newContactPhone?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+      const matchesResult = filterResult ? call.result === filterResult : true;
+      const matchesCaller = filterCaller ? call.caller === filterCaller : true;
+      const matchesCity = filterCity ? call.city === filterCity : true;
+
+      // Date range filter
+      let matchesDateRange = true;
+      if (filterDateRange.start && filterDateRange.end) {
+        const callDate = new Date(call.callDate);
+        const startDate = new Date(filterDateRange.start);
+        const endDate = new Date(filterDateRange.end);
+        matchesDateRange = callDate >= startDate && callDate <= endDate;
+      } else if (filterDateRange.start) {
+        const callDate = new Date(call.callDate);
+        const startDate = new Date(filterDateRange.start);
+        matchesDateRange = callDate >= startDate;
+      } else if (filterDateRange.end) {
+        const callDate = new Date(call.callDate);
+        const endDate = new Date(filterDateRange.end);
+        matchesDateRange = callDate <= endDate;
+      }
+
+      return matchesSearch && matchesResult && matchesCaller && matchesCity && matchesDateRange;
+    });
+
+    // Reset to first page when filters change
+    setCurrentPage(1);
+    return filtered;
+  }, [calls, searchTerm, filterResult, filterCaller, filterCity, filterDateRange]);
+
+  // Paginated data
+  const paginatedCalls = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredCalls.slice(startIndex, endIndex);
+  }, [filteredCalls, currentPage]);
+
+  const totalPages = Math.ceil(filteredCalls.length / ITEMS_PER_PAGE);
+
+
+  // --- İstatistik ve Rapor Hesaplamaları ---
+  const stats = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    const dayOfWeek = now.getDay() || 7; 
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - dayOfWeek + 1); 
+    startOfWeek.setHours(0,0,0,0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); 
+    endOfWeek.setHours(23,59,59,999);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    endOfMonth.setHours(23,59,59,999);
+
+    const filterByRange = (start, end) => calls.filter(c => {
+      const callDate = new Date(c.callDate);
+      return callDate >= start && callDate <= end;
+    });
+
+    const weeklyCalls = filterByRange(startOfWeek, endOfWeek);
+    const monthlyCalls = filterByRange(startOfMonth, endOfMonth);
+
+    // HATIRLATMA MANTIĞI: Bugünün tarihi ile eşleşen ve sonucu 'Tekrar Aranacak' veya 'Randevu Alındı' olanlar
+    const todaysReminders = calls.filter(c => 
+      c.callDate === todayStr && 
+      (c.result === 'Tekrar Aranacak' || c.result === 'Randevu Alındı')
+    );
+
+    const industries = {};
+    calls.forEach(c => {
+      industries[c.industry] = (industries[c.industry] || 0) + 1;
+    });
+
+    const results = {};
+    calls.forEach(c => {
+      results[c.result] = (results[c.result] || 0) + 1;
+    });
+
+    return {
+      total: calls.length,
+      weeklyCount: weeklyCalls.length,
+      monthlyCount: monthlyCalls.length,
+      industries,
+      results,
+      weeklyList: weeklyCalls,
+      monthlyList: monthlyCalls,
+      todaysReminders, // Yeni: Hatırlatmalar
+      dateRanges: {
+        weekStart: startOfWeek,
+        weekEnd: endOfWeek,
+        monthStart: startOfMonth,
+        monthEnd: endOfMonth
+      }
+    };
+  }, [calls]);
+
+  // --- Alt Bileşenler ---
+
+  // Notification Component
+  const Notification = () => {
+    if (!notification) return null;
+
+    const bgColor = notification.type === 'success' ? 'bg-green-500' :
+                    notification.type === 'error' ? 'bg-red-500' :
+                    notification.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+
+    return (
+      <div className="fixed top-4 right-4 z-50 animate-slide-in">
+        <div className={`${bgColor} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`}>
+          {notification.type === 'success' && <CheckCircle size={20} />}
+          {notification.type === 'error' && <XCircle size={20} />}
+          {notification.type === 'warning' && <AlertTriangle size={20} />}
+          <span className="font-medium">{notification.message}</span>
+          <button onClick={() => setNotification(null)} className="ml-2">
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Pagination Component
+  const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-lg border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 transition"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        {startPage > 1 && (
+          <>
+            <button onClick={() => onPageChange(1)} className="px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100">
+              1
+            </button>
+            {startPage > 2 && <span className="text-slate-400">...</span>}
+          </>
+        )}
+
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`px-3 py-1 rounded-lg border ${
+              currentPage === page
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'border-slate-300 hover:bg-slate-100'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="text-slate-400">...</span>}
+            <button onClick={() => onPageChange(totalPages)} className="px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100">
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="p-2 rounded-lg border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 transition"
+        >
+          <ChevronRight size={20} />
+        </button>
+
+        <span className="text-sm text-slate-600 ml-4">
+          Sayfa {currentPage} / {totalPages}
+        </span>
+      </div>
+    );
+  };
+
+  // Hatırlatma Kutusu Bileşeni (Yeni)
+  const ReminderBox = () => {
+    if (stats.todaysReminders.length === 0) return null;
+
+    return (
+      <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded-r-lg shadow-sm animate-pulse-slow">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="text-orange-600 mt-1" size={24} />
+          <div className="flex-1">
+            <h3 className="font-bold text-orange-800 text-lg">Günün Hatırlatmaları ({stats.todaysReminders.length})</h3>
+            <p className="text-sm text-orange-700 mb-3">
+              Bugün işlem yapılan ve takip gerektiren kayıtlar:
+            </p>
+            <div className="space-y-2">
+              {stats.todaysReminders.map(call => (
+                <div key={call.id} className="bg-white p-3 rounded border border-orange-200 flex justify-between items-center text-sm">
+                  <div>
+                    <span className="font-bold text-slate-700">{call.companyName}</span> 
+                    <span className="mx-2 text-slate-400">|</span> 
+                    <span className="text-slate-600">{call.contactPerson}</span>
+                  </div>
+                  <Badge type="warning">{call.result}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const EntryForm = () => (
+    <div className="max-w-4xl mx-auto">
+      <ReminderBox /> {/* Hatırlatma Kutusu Eklendi */}
+
+      <div className="mb-6 animate-fade-in">
+        <h2 className={`text-2xl font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+          {editingId ? <Edit size={24} className="text-orange-500" /> : <CheckCircle size={24} className="text-blue-500" />}
+          {editingId ? "Kaydı Düzenle" : "Yeni Arama Kaydı"}
+        </h2>
+        <p className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+          {editingId ? "Mevcut kayıttaki bilgileri güncelleyiniz." : "Görüşme detaylarını eksiksiz doldurunuz."}
+        </p>
+      </div>
+
+      <div className={`p-6 rounded-xl shadow-lg border-t-4 border-t-blue-500 transition-all duration-300 ${
+        darkMode
+          ? 'glass-dark border-l border-r border-b border-slate-700'
+          : 'glass border-l border-r border-b border-white/30'
+      }`}>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* PERSONEL SEÇİMİ */}
+          <div className={`md:col-span-2 p-4 rounded-lg border transition-colors ${
+            darkMode
+              ? 'bg-blue-900/20 border-blue-700/50'
+              : 'bg-blue-50 border-blue-100'
+          }`}>
+            <label className={`block text-sm font-bold mb-2 flex items-center gap-2 ${
+              darkMode ? 'text-blue-400' : 'text-blue-800'
+            }`}>
+              <UserCircle size={20} /> Aramayı Yapan Personel
+            </label>
+            <select
+              required
+              name="caller"
+              value={formData.caller}
+              onChange={handleInputChange}
+              className={`w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-colors ${
+                darkMode
+                  ? 'bg-slate-800/50 border border-slate-600 text-white'
+                  : 'bg-white border border-blue-200 text-blue-900'
+              }`}
+            >
+              <option value="">Personel Seçiniz...</option>
+              {CALLERS.sort().map(caller => (
+                <option key={caller} value={caller}>{caller}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Firma Bilgileri */}
+          <div className="space-y-4">
+            <h3 className={`text-lg font-semibold flex items-center gap-2 ${
+              darkMode ? 'text-blue-400' : 'text-blue-600'
+            }`}>
+              <Building size={20} /> Firma Bilgileri
+            </h3>
+
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${
+                darkMode ? 'text-slate-300' : 'text-slate-700'
+              }`}>Firma Adı</label>
+              <input
+                required
+                type="text"
+                name="companyName"
+                value={formData.companyName}
+                onChange={handleInputChange}
+                className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                  darkMode
+                    ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500'
+                    : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'
+                }`}
+                placeholder="Örn: ABC Lojistik A.Ş."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${
+                  darkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>Sektör</label>
+                <select
+                  required
+                  name="industry"
+                  value={formData.industry}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                    darkMode
+                      ? 'bg-slate-800/50 border border-slate-600 text-white'
+                      : 'bg-white border border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="">Seçiniz...</option>
+                  <option value="Teknoloji">Teknoloji & Yazılım</option>
+                  <option value="İnşaat">İnşaat & Yapı</option>
+                  <option value="Lojistik">Lojistik & Ulaşım</option>
+                  <option value="Sağlık">Sağlık & Medikal</option>
+                  <option value="Perakende">Perakende & Mağazacılık</option>
+                  <option value="Üretim">Üretim & Sanayi</option>
+                  <option value="Finans">Finans & Bankacılık</option>
+                  <option value="Eğitim">Eğitim & Akademi</option>
+                  <option value="Turizm">Turizm & Otelcilik</option>
+                  <option value="Otomotiv">Otomotiv</option>
+                  <option value="Enerji">Enerji & Madencilik</option>
+                  <option value="Tekstil">Tekstil & Moda</option>
+                  <option value="Gayrimenkul">Gayrimenkul</option>
+                  <option value="Gıda">Gıda & İçecek</option>
+                  <option value="Danışmanlık">Danışmanlık</option>
+                  <option value="Medya">Medya & Reklam</option>
+                  <option value="Telekomünikasyon">Telekomünikasyon</option>
+                  <option value="Tarım">Tarım & Hayvancılık</option>
+                  <option value="Kimya">Kimya & Kozmetik</option>
+                  <option value="Mobilya">Mobilya & Dekorasyon</option>
+                  <option value="Hukuk">Hukuk</option>
+                  <option value="İthalat">İthalat & İhracat</option>
+                  <option value="Hizmet">Hizmet Sektörü</option>
+                  <option value="Diğer">Diğer</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${
+                  darkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>Tarih</label>
+                <input
+                  required
+                  type="date"
+                  name="callDate"
+                  value={formData.callDate}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                    darkMode
+                      ? 'bg-slate-800/50 border border-slate-600 text-white'
+                      : 'bg-white border border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>İl</label>
+                <select
+                  required
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
+                >
+                  <option value="">İl Seçiniz</option>
+                  {Object.keys(CITIES_DATA)
+                    .sort((a, b) => a.localeCompare(b, 'tr'))
+                    .map(city => (
+                      <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>İlçe</label>
+                <select
+                  required
+                  name="district"
+                  value={formData.district}
+                  onChange={handleInputChange}
+                  disabled={!formData.city}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                    darkMode
+                      ? 'bg-slate-800/50 border border-slate-600 text-white disabled:bg-slate-900/30 disabled:text-slate-600'
+                      : 'bg-white border border-slate-300 text-slate-900 disabled:bg-slate-100 disabled:text-slate-400'
+                  }`}
+                >
+                  <option value="">İlçe Seçiniz</option>
+                  {formData.city && 
+                    [...CITIES_DATA[formData.city]]
+                      .sort((a, b) => a.localeCompare(b, 'tr'))
+                      .map(dist => (
+                        <option key={dist} value={dist}>{dist}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Kişi ve Sonuç Bilgileri */}
+          <div className="space-y-4">
+            <h3 className={`text-lg font-semibold flex items-center gap-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+              <User size={20} /> İletişim & Sonuç
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Görüşülen Kişi</label>
+                <input 
+                  required
+                  type="text" 
+                  name="contactPerson"
+                  value={formData.contactPerson}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500' : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'}`}
+                  placeholder="Ahmet Yılmaz"
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unvan</label>
+                <input 
+                  required
+                  type="text" 
+                  name="contactTitle"
+                  value={formData.contactTitle}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500' : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'}`}
+                  placeholder="Satın Alma Müdürü"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Aranan Numara</label>
+                <input 
+                  required
+                  type="text" 
+                  name="contactPhone"
+                  value={formData.contactPhone}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500' : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'}`}
+                  placeholder="(555) 123 45 67"
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Alınan Yeni Numara (Varsa)</label>
+                <input 
+                  type="text" 
+                  name="newContactPhone"
+                  value={formData.newContactPhone}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  placeholder="(5XX) XXX XX XX"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Görüşme Saati (09:00 - 18:00)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={formData.callTime.split(':')[0]}
+                  onChange={(e) => handleTimeChange('hour', e.target.value)}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500' : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'}`}
+                >
+                  {HOURS.map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                
+                <select
+                  value={formData.callTime.split(':')[1]}
+                  onChange={(e) => handleTimeChange('minute', e.target.value)}
+                  className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${darkMode ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500' : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'}`}
+                >
+                  {MINUTES.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Sadece mesai saatleri seçilebilir.</p>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Görüşme Sonucu</label>
+              <select 
+                required
+                name="result"
+                value={formData.result}
+                onChange={handleInputChange}
+                className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="Görüşüldü">✅ Görüşüldü (Olumlu)</option>
+                <option value="Mail İstedi">📧 Mail İstedi</option>
+                <option value="Randevu Alındı">📅 Randevu Alındı</option>
+                <option value="Teklif Bekliyor">📄 Teklif Bekliyor</option>
+                <option value="Yetkiliye İletildi">🗣️ Yetkiliye İletildi</option>
+                <option value="Tekrar Aranacak">🔄 Tekrar Aranacak</option>
+                <option value="Ulaşılamadı">📞 Ulaşılamadı</option>
+                <option value="Reddedildi">❌ Reddedildi (Olumsuz)</option>
+                <option value="Yanlış Numara">🚫 Yanlış Numara</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Notlar</label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows="2"
+                className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                  darkMode
+                    ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500'
+                    : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400'
+                }`}
+                placeholder="Özel notlar..."
+              ></textarea>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 mt-4 flex gap-4">
+            <button 
+              type="submit" 
+              className={`flex-1 font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2 text-white ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              {editingId ? <Edit size={20} /> : <CheckCircle size={20} />}
+              {editingId ? "Değişiklikleri Kaydet" : "Kaydı Tamamla"}
+            </button>
+            
+            {editingId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className={`font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                }`}
+              >
+                <X size={20} /> İptal
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
+  const CallsTable = ({ data, title, onDownload, showActions = true, showPagination = false, darkMode = false }) => (
+    <div className="space-y-4">
+       <div className="flex justify-between items-center">
+        <h2 className={`text-xl font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+          {title}
+        </h2>
+        <div className="flex items-center gap-4">
+          <span className={`text-sm hidden md:inline ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            Toplam {filteredCalls.length} kayıt
+            {showPagination && totalPages > 1 && ` (Sayfa ${currentPage}/${totalPages})`}
+          </span>
+          {onDownload && (
+            <button
+              onClick={onDownload}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg hover:shadow-xl"
+            >
+              <Download size={14} /> Excel İndir
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className={`rounded-xl shadow-lg overflow-hidden transition-all duration-300 ${
+        darkMode
+          ? 'glass-dark border border-slate-700'
+          : 'glass border border-white/30'
+      }`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className={`font-semibold border-b transition-colors ${
+              darkMode
+                ? 'bg-slate-800/50 text-slate-300 border-slate-700'
+                : 'bg-slate-50 text-slate-700 border-slate-200'
+            }`}>
+              <tr>
+                <th className="p-4">Tarih/Saat</th>
+                <th className="p-4">Personel</th>
+                <th className="p-4">Firma</th>
+                <th className="p-4">İlgili Kişi</th>
+                <th className="p-4">Telefon</th>
+                <th className="p-4">Konum</th>
+                <th className="p-4">Sektör</th>
+                <th className="p-4">Sonuç</th>
+                {showActions && <th className="p-4 text-right">İşlem</th>}
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${darkMode ? 'divide-slate-700' : 'divide-slate-100'}`}>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={showActions ? "9" : "8"} className={`p-8 text-center ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Kayıt bulunmamaktadır.
+                  </td>
+                </tr>
+              ) : (
+                data.map((call) => (
+                  <tr key={call.id} className={`transition-colors ${
+                    darkMode ? 'hover:bg-slate-700/30' : 'hover:bg-slate-50'
+                  }`}>
+                    <td className="p-4 whitespace-nowrap">
+                      <div className={`font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>{call.callDate}</div>
+                      <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{call.callTime}</div>
+                    </td>
+                    <td className={`p-4 font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{call.caller || "-"}</td>
+                    <td className="p-4 font-medium text-blue-500">{call.companyName}</td>
+                    <td className="p-4">
+                      <div className={darkMode ? 'text-white' : 'text-slate-900'}>{call.contactPerson}</div>
+                      <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{call.contactTitle}</div>
+                    </td>
+                    <td className="p-4">
+                       <div className={`text-xs flex items-center gap-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          <Phone size={12} className={darkMode ? 'text-slate-500' : 'text-slate-400'}/> {call.contactPhone || "-"}
+                       </div>
+                       {call.newContactPhone && (
+                         <div className="text-green-500 text-xs font-semibold flex items-center gap-1 mt-1">
+                            <Smartphone size={12} /> {call.newContactPhone}
+                         </div>
+                       )}
+                    </td>
+                    <td className={`p-4 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{call.city} / {call.district}</td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'
+                      }`}>
+                        {call.industry}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <Badge type={
+                        call.result.includes('Olumlu') || call.result.includes('Randevu') || call.result.includes('Teklif') || call.result.includes('Mail') ? 'success' :
+                        call.result.includes('Reddedildi') || call.result.includes('Yanlış') ? 'danger' : 'warning'
+                      }>
+                        {call.result}
+                      </Badge>
+                      {call.notes && (
+                         <div className="text-xs text-slate-400 mt-1 max-w-[150px] truncate">{call.notes}</div>
+                      )}
+                    </td>
+                    {showActions && (
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleEdit(call)}
+                            className="text-slate-400 hover:text-blue-500 p-1"
+                            title="Düzenle"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(call.id)}
+                            className="text-slate-400 hover:text-red-500 p-1"
+                            title="Sil"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {showPagination && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+    </div>
+  );
+
+  const ReportsView = () => {
+    // Tarih Formatlayıcı (GG.AA.YYYY)
+    const formatDate = (date) => date.toLocaleDateString('tr-TR');
+
+    const weekTitle = `Haftalık Rapor (${formatDate(stats.dateRanges.weekStart)} - ${formatDate(stats.dateRanges.weekEnd)})`;
+    const monthTitle = `Aylık Rapor (${formatDate(stats.dateRanges.monthStart)} - ${formatDate(stats.dateRanges.monthEnd)})`;
+
+    // Personel performansı
+    const staffPerformance = useMemo(() => {
+      const performance = {};
+      calls.forEach(call => {
+        if (!performance[call.caller]) {
+          performance[call.caller] = {
+            total: 0,
+            successful: 0,
+            pending: 0,
+            failed: 0
+          };
+        }
+        performance[call.caller].total++;
+
+        if (['Görüşüldü', 'Randevu Alındı', 'Teklif Bekliyor', 'Mail İstedi'].includes(call.result)) {
+          performance[call.caller].successful++;
+        } else if (['Reddedildi', 'Yanlış Numara'].includes(call.result)) {
+          performance[call.caller].failed++;
+        } else {
+          performance[call.caller].pending++;
+        }
+      });
+      return performance;
+    }, [calls]);
+
+    return (
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex justify-between items-center bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6 rounded-xl shadow-lg">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Activity className="text-blue-400" size={28} />
+              Yönetici Paneli
+            </h2>
+            <p className="text-slate-300">Genel performans özeti ve detaylı raporlar</p>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => exportToExcel(calls, "Tum_Arama_Kayitlari")}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors border border-green-500 shadow-md"
+              >
+                <Download size={16} /> Tümünü İndir
+              </button>
+              <div className="text-right bg-slate-900/50 px-4 py-2 rounded-lg">
+                <div className="text-3xl font-bold">{stats.total}</div>
+                <div className="text-sm text-slate-400">Toplam Arama</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="p-6 border-l-4 border-blue-500">
+            <div className="text-slate-500 text-sm font-medium mb-1">Bu Hafta ({formatDate(stats.dateRanges.weekStart)} - ...)</div>
+            <div className="text-3xl font-bold text-slate-800">{stats.weeklyCount}</div>
+            <div className="text-xs text-green-600 mt-2 font-medium">Bu hafta girilen kayıtlar</div>
+          </Card>
+          <Card className="p-6 border-l-4 border-indigo-500">
+            <div className="text-slate-500 text-sm font-medium mb-1">Bu Ay ({formatDate(stats.dateRanges.monthStart)} - ...)</div>
+            <div className="text-3xl font-bold text-slate-800">{stats.monthlyCount}</div>
+            <div className="text-xs text-green-600 mt-2 font-medium">Bu ay girilen kayıtlar</div>
+          </Card>
+          <Card className="p-6 border-l-4 border-green-500">
+            <div className="text-slate-500 text-sm font-medium mb-1">Verimlilik</div>
+            <div className="text-3xl font-bold text-slate-800">
+              {stats.total > 0 
+                ? Math.round(((stats.results['Görüşüldü'] || 0) + (stats.results['Teklif Bekliyor'] || 0) + (stats.results['Randevu Alındı'] || 0) + (stats.results['Mail İstedi'] || 0)) / stats.total * 100)
+                : 0}%
+            </div>
+            <div className="text-xs text-slate-400 mt-2 font-medium">Olumlu Sonuç Oranı</div>
+          </Card>
+        </div>
+
+        {/* Staff Performance Section */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Target size={20} className="text-purple-500" /> Personel Performansı
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="p-3 text-left">Personel</th>
+                  <th className="p-3 text-center">Toplam</th>
+                  <th className="p-3 text-center">Başarılı</th>
+                  <th className="p-3 text-center">Beklemede</th>
+                  <th className="p-3 text-center">Başarısız</th>
+                  <th className="p-3 text-center">Oran</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Object.entries(staffPerformance)
+                  .sort((a, b) => b[1].total - a[1].total)
+                  .map(([name, data]) => (
+                    <tr key={name} className="hover:bg-slate-50">
+                      <td className="p-3 font-medium text-slate-700">{name}</td>
+                      <td className="p-3 text-center font-bold">{data.total}</td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                          {data.successful}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                          {data.pending}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                          {data.failed}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center font-bold text-blue-600">
+                        {data.total > 0 ? Math.round((data.successful / data.total) * 100) : 0}%
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <PieChart size={20} className="text-blue-500" /> Sektör Dağılımı
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(stats.industries).map(([name, count]) => (
+                <div key={name}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-700">{name || "Belirtilmemiş"}</span>
+                    <span className="font-medium text-slate-900">{count}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full" 
+                      style={{ width: `${(count / stats.total) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-indigo-500" /> Sonuç Analizi
+            </h3>
+            <div className="space-y-4">
+              {Object.entries(stats.results).map(([name, count]) => (
+                <div key={name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        name.includes('Reddedildi') || name.includes('Yanlış') ? 'bg-red-500' :
+                        name.includes('Ulaşılamadı') || name.includes('Tekrar') || name.includes('Yetkiliye') ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}></div>
+                      <span className="text-sm font-medium text-slate-700">{name}</span>
+                    </div>
+                    <span className="font-bold text-slate-800">{count}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <CallsTable
+            data={stats.weeklyList}
+            title={weekTitle}
+            showActions={false} // Raporda düzenleme butonlarını gizle
+            onDownload={() => exportToExcel(stats.weeklyList, `Haftalik_Rapor_${formatDate(stats.dateRanges.weekStart)}_${formatDate(stats.dateRanges.weekEnd)}`)}
+            darkMode={darkMode}
+          />
+          <CallsTable
+            data={stats.monthlyList}
+            title={monthTitle}
+            showActions={false} // Raporda düzenleme butonlarını gizle
+            onDownload={() => exportToExcel(stats.monthlyList, `Aylik_Rapor_${formatDate(stats.dateRanges.monthStart)}_${formatDate(stats.dateRanges.monthEnd)}`)}
+            darkMode={darkMode}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // --- Render ---
+
+  return (
+    <div className={`min-h-screen font-sans flex transition-colors duration-500 ${
+      darkMode
+        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white'
+        : 'bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 text-slate-900'
+    }`}>
+      <Notification />
+      {/* Yan Menü (Sidebar) */}
+      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col fixed h-full shadow-xl z-10">
+        <div className="p-6 border-b border-slate-800">
+          <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
+            <Phone className="text-blue-400" />
+            CALL<span className="text-blue-400">TRACK</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">Kurumsal Takip Sistemi</p>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => { setActiveTab('entry'); setEditingId(null); handleCancelEdit(); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+          >
+            <CheckCircle size={20} /> Arama Girişi
+          </button>
+
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+          >
+            <List size={20} /> Tüm Kayıtlar
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+          >
+            <BarChart3 size={20} /> Raporlar & Patron
+          </button>
+
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <p className="text-xs text-slate-500 mb-2 px-2">Veri Yönetimi</p>
+            <button
+              onClick={backupData}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors text-sm"
+            >
+              <Save size={18} /> Yedek Al
+            </button>
+            <label className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors text-sm cursor-pointer">
+              <Upload size={18} /> Yedek Yükle
+              <input
+                type="file"
+                accept=".json"
+                onChange={restoreData}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <p className="text-xs text-slate-500 mb-2 px-2">Görünüm</p>
+            <button
+              onClick={toggleDarkMode}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors text-sm"
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              {darkMode ? 'Aydınlık Mod' : 'Karanlık Mod'}
+            </button>
+            <button
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors text-sm"
+            >
+              {viewMode === 'list' ? <LayoutGrid size={18} /> : <List size={18} />}
+              {viewMode === 'list' ? 'Izgara Görünüm' : 'Liste Görünüm'}
+            </button>
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles size={12} className="text-blue-400" />
+            <span className="font-semibold text-white">v2.0.0</span>
+          </div>
+          <p className="text-xs">Modern Edition</p>
+        </div>
+      </aside>
+
+      {/* Mobil Menü Başlığı */}
+      <div className="md:hidden fixed top-0 w-full bg-slate-900 text-white p-4 z-20 flex justify-between items-center">
+         <span className="font-bold">CallTrack</span>
+         <div className="flex gap-4">
+            <button onClick={() => setActiveTab('entry')}><CheckCircle size={24}/></button>
+            <button onClick={() => setActiveTab('list')}><List size={24}/></button>
+            <button onClick={() => setActiveTab('reports')}><BarChart3 size={24}/></button>
+         </div>
+      </div>
+
+      {/* Ana İçerik Alanı */}
+      <main className={`flex-1 md:ml-64 p-6 md:p-10 pt-20 md:pt-10 pb-48 transition-all ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+        {activeTab === 'entry' && <EntryForm />}
+        {activeTab === 'list' && (
+          <div className="space-y-6">
+            {/* ARAMA VE FİLTRELEME ALANI */}
+            <div className={`p-4 rounded-xl shadow-lg transition-all duration-300 ${
+              darkMode
+                ? 'glass-dark border border-slate-700'
+                : 'glass border border-white/30 shadow-xl'
+            }`}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={18} className="text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Firma, Kişi, Telefon Ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`pl-10 w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400'
+                        : 'bg-white/50 border border-slate-300 text-slate-900 placeholder-slate-500'
+                    }`}
+                  />
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Filter size={18} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={filterResult}
+                    onChange={(e) => setFilterResult(e.target.value)}
+                    className={`pl-10 w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white'
+                        : 'bg-white/50 border border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="">Tüm Sonuçlar</option>
+                    <option value="Görüşüldü">✅ Görüşüldü</option>
+                    <option value="Mail İstedi">📧 Mail İstedi</option>
+                    <option value="Randevu Alındı">📅 Randevu Alındı</option>
+                    <option value="Teklif Bekliyor">📄 Teklif Bekliyor</option>
+                    <option value="Yetkiliye İletildi">🗣️ Yetkiliye İletildi</option>
+                    <option value="Tekrar Aranacak">🔄 Tekrar Aranacak</option>
+                    <option value="Ulaşılamadı">📞 Ulaşılamadı</option>
+                    <option value="Reddedildi">❌ Reddedildi</option>
+                    <option value="Yanlış Numara">🚫 Yanlış Numara</option>
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserCircle size={18} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={filterCaller}
+                    onChange={(e) => setFilterCaller(e.target.value)}
+                    className={`pl-10 w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white'
+                        : 'bg-white/50 border border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="">Tüm Personeller</option>
+                    {CALLERS.map(caller => (
+                      <option key={caller} value={caller}>{caller}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin size={18} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={filterCity}
+                    onChange={(e) => setFilterCity(e.target.value)}
+                    className={`pl-10 w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white'
+                        : 'bg-white/50 border border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="">Tüm İller</option>
+                    {Object.keys(CITIES_DATA).sort((a, b) => a.localeCompare(b, 'tr')).map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <input
+                    type="date"
+                    value={filterDateRange.start}
+                    onChange={(e) => setFilterDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white'
+                        : 'bg-white/50 border border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="Başlangıç Tarihi"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={filterDateRange.end}
+                    onChange={(e) => setFilterDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className={`flex-1 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 border border-slate-600 text-white'
+                        : 'bg-white/50 border border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="Bitiş Tarihi"
+                  />
+                  {(searchTerm || filterResult || filterCaller || filterCity || filterDateRange.start || filterDateRange.end) && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setFilterResult('');
+                        setFilterCaller('');
+                        setFilterCity('');
+                        setFilterDateRange({ start: '', end: '' });
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        darkMode
+                          ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                          : 'bg-red-100 text-red-600 hover:bg-red-200'
+                      }`}
+                      title="Tüm Filtreleri Temizle"
+                    >
+                      <X size={20} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <CallsTable
+              data={paginatedCalls}
+              title={searchTerm || filterResult || filterCaller || filterCity || filterDateRange.start || filterDateRange.end ? "Filtrelenmiş Sonuçlar" : "Tüm Arama Kayıtları"}
+              onDownload={() => exportToExcel(filteredCalls, "Filtreli_Arama_Kayitlari")}
+              showPagination={true}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+        {activeTab === 'reports' && <ReportsView />}
+      </main>
+    </div>
+  );
+}

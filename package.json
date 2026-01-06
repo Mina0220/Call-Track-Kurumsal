@@ -1,0 +1,55 @@
+{
+  "name": "calltrack-kurumsal",
+  "productName": "CallTrack Kurumsal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Kurumsal Arama Takip ve Raporlama Sistemi",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vite",
+    "network": "vite --host",
+    "server": "node server.js",
+    "dev:full": "concurrently \"npm run server\" \"npm run network\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prod": "npm run build && npm run start",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"vite\" \"electron .\"",
+    "electron:build": "vite build && electron-builder"
+  },
+  "author": "Sirket Yazilim",
+  "license": "MIT",
+  "build": {
+    "appId": "com.sirket.calltrack",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js"
+    ]
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "autoprefixer": "^10.4.14",
+    "concurrently": "^8.2.0",
+    "electron": "^25.2.0",
+    "electron-builder": "^24.4.0",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2",
+    "vite": "^4.3.9"
+  }
+}

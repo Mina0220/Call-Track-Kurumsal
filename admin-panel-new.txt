@@ -1,0 +1,324 @@
+// Admin Panel Component - Enhanced Version
+const AdminPanel = ({ isAuthenticated, onLogin, onLogout, password, setPassword, theme, calls, setCalls }) => {
+  const [activeView, setActiveView] = useState('overview'); // overview, personnel, sectors, bulk
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedPersonnel, setSelectedPersonnel] = useState('all');
+  const [selectedSector, setSelectedSector] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto mt-20 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <Card className="p-8">
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <div className={`p-4 rounded-2xl bg-gradient-to-br ${theme.classes.lightGradient}`}>
+              <Lock size={32} className={theme.classes.text} />
+            </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">Yönetici Paneli</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Devam etmek için giriş yapın</p>
+            </div>
+          </div>
+
+          <form onSubmit={onLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Şifre</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Admin şifresini girin"
+                className={`w-full p-3 border rounded-lg focus:ring-2 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${theme.classes.border} ${theme.classes.ring}`}
+                required
+              />
+            </div>
+            <Button type="submit" variant="primary" className="w-full" icon={Shield}>
+              Giriş Yap
+            </Button>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
+  // Personel analizi
+  const personnelStats = useMemo(() => {
+    const stats = {};
+    calls.forEach(call => {
+      const caller = call.caller || 'Bilinmiyor';
+      if (!stats[caller]) {
+        stats[caller] = {
+          total: 0,
+          success: 0,
+          pending: 0,
+          failed: 0,
+          sectors: {},
+          cities: {}
+        };
+      }
+      stats[caller].total++;
+
+      if (call.result === 'Randevu Alındı' || call.result === 'İlgililer') {
+        stats[caller].success++;
+      } else if (call.result === 'Tekrar Ara' || call.result === 'Whatsapp Gönderildi') {
+        stats[caller].pending++;
+      } else {
+        stats[caller].failed++;
+      }
+
+      // Sektör dağılımı
+      if (call.industry) {
+        stats[caller].sectors[call.industry] = (stats[caller].sectors[call.industry] || 0) + 1;
+      }
+
+      // Şehir dağılımı
+      if (call.city) {
+        stats[caller].cities[call.city] = (stats[caller].cities[call.city] || 0) + 1;
+      }
+    });
+    return stats;
+  }, [calls]);
+
+  // Sektör analizi
+  const sectorStats = useMemo(() => {
+    const stats = {};
+    calls.forEach(call => {
+      const sector = call.industry || 'Diğer';
+      if (!stats[sector]) {
+        stats[sector] = {
+          total: 0,
+          success: 0,
+          successRate: 0,
+          personnel: {}
+        };
+      }
+      stats[sector].total++;
+
+      if (call.result === 'Randevu Alındı' || call.result === 'İlgililer') {
+        stats[sector].success++;
+      }
+
+      const caller = call.caller || 'Bilinmiyor';
+      stats[sector].personnel[caller] = (stats[sector].personnel[caller] || 0) + 1;
+    });
+
+    // Başarı oranını hesapla
+    Object.keys(stats).forEach(sector => {
+      stats[sector].successRate = ((stats[sector].success / stats[sector].total) * 100).toFixed(1);
+    });
+
+    return stats;
+  }, [calls]);
+
+  // Filtrelenmiş çağrılar
+  const filteredCalls = useMemo(() => {
+    let filtered = [...calls];
+
+    if (selectedPersonnel !== 'all') {
+      filtered = filtered.filter(c => c.caller === selectedPersonnel);
+    }
+
+    if (selectedSector !== 'all') {
+      filtered = filtered.filter(c => c.industry === selectedSector);
+    }
+
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      filtered = filtered.filter(c => {
+        const callDate = new Date(c.callDate);
+
+        if (dateFilter === 'today') {
+          return callDate >= today;
+        } else if (dateFilter === 'week') {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return callDate >= weekAgo;
+        } else if (dateFilter === 'month') {
+          const monthAgo = new Date(today);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          return callDate >= monthAgo;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [calls, selectedPersonnel, selectedSector, dateFilter]);
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) {
+      alert('Lütfen silmek için kayıt seçin');
+      return;
+    }
+    if (window.confirm(`${selectedIds.length} kayıt silinecek. Emin misiniz?`)) {
+      setCalls(calls.filter(call => !selectedIds.includes(call.id)));
+      setSelectedIds([]);
+      setBulkDeleteMode(false);
+    }
+  };
+
+  const toggleSelection = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 px-1">
+        <div className="flex items-center gap-3">
+          <div className={`p-3 rounded-xl bg-gradient-to-br ${theme.classes.lightGradient} shadow-sm`}>
+            <Shield size={24} className={theme.classes.text} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Yönetici Paneli</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Detaylı raporlama ve analiz</p>
+          </div>
+        </div>
+        <Button onClick={onLogout} variant="danger" icon={Lock} size="sm">
+          Çıkış Yap
+        </Button>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
+          onClick={() => setActiveView('overview')}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+            activeView === 'overview'
+              ? `bg-gradient-to-r ${theme.classes.gradient} text-white shadow-md`
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <BarChart3 size={16} className="inline mr-2" />
+          Genel Bakış
+        </button>
+        <button
+          onClick={() => setActiveView('personnel')}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+            activeView === 'personnel'
+              ? `bg-gradient-to-r ${theme.classes.gradient} text-white shadow-md`
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <Users size={16} className="inline mr-2" />
+          Personel Analizi
+        </button>
+        <button
+          onClick={() => setActiveView('sectors')}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+            activeView === 'sectors'
+              ? `bg-gradient-to-r ${theme.classes.gradient} text-white shadow-md`
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <PieChart size={16} className="inline mr-2" />
+          Sektör Analizi
+        </button>
+        <button
+          onClick={() => setActiveView('bulk')}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+            activeView === 'bulk'
+              ? `bg-gradient-to-r ${theme.classes.gradient} text-white shadow-md`
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <Database size={16} className="inline mr-2" />
+          Toplu İşlemler
+        </button>
+      </div>
+
+      {/* Overview View */}
+      {activeView === 'overview' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Database size={20} className="text-blue-500" />
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">Toplam Kayıt</h3>
+              </div>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{calls.length}</p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Building size={20} className="text-green-500" />
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">Benzersiz Firma</h3>
+              </div>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                {new Set(calls.map(c => c.companyName)).size}
+              </p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Users size={20} className="text-purple-500" />
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">Aktif Personel</h3>
+              </div>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                {Object.keys(personnelStats).length}
+              </p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Briefcase size={20} className="text-orange-500" />
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">Aktif Sektör</h3>
+              </div>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                {Object.keys(sectorStats).length}
+              </p>
+            </Card>
+          </div>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Hızlı İstatistikler</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="text-sm text-green-600 dark:text-green-400 font-semibold mb-1">Başarılı Aramalar</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                  {calls.filter(c => c.result === 'Randevu Alındı' || c.result === 'İlgililer').length}
+                </p>
+              </div>
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <p className="text-sm text-yellow-600 dark:text-yellow-400 font-semibold mb-1">Bekleyen</p>
+                <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                  {calls.filter(c => c.result === 'Tekrar Ara' || c.result === 'Whatsapp Gönderildi').length}
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <p className="text-sm text-slate-600 dark:text-slate-400 font-semibold mb-1">Bu Ay</p>
+                <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                  {calls.filter(c => {
+                    const callDate = new Date(c.callDate);
+                    const now = new Date();
+                    return callDate.getMonth() === now.getMonth() && callDate.getFullYear() === now.getFullYear();
+                  }).length}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Personnel Analysis View - TRIMMED FOR LENGTH */}
+      {activeView === 'personnel' && (
+        <div>PERSONNEL CONTENT</div>
+      )}
+
+      {/* Sectors View - TRIMMED FOR LENGTH */}
+      {activeView === 'sectors' && (
+        <div>SECTORS CONTENT</div>
+      )}
+
+      {/* Bulk View - TRIMMED FOR LENGTH */}
+      {activeView === 'bulk' && (
+        <div>BULK CONTENT</div>
+      )}
+    </div>
+  );
+};
