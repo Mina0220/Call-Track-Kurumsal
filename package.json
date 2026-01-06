@@ -20,6 +20,10 @@
   },
   "author": "Sirket Yazilim",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "build": {
     "appId": "com.sirket.calltrack",
     "win": {
