@@ -3503,7 +3503,7 @@ export default function App() {
     return savedAuth === 'true';
   });
   const [adminPassword, setAdminPassword] = useState('');
-  const ADMIN_PASSWORD = 'admin2026'; // Şifreyi değiştirmek için bu satırı düzenleyin
+  const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026'; // Production'da environment variable kullanılır
 
   // THEME STATE
   const [themeColor, setThemeColor] = useState(() => {

@@ -5,7 +5,9 @@ import { createServer } from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 import { initDatabase, getAllCalls, updateCalls as dbUpdateCalls, getAllTasks, updateTasks as dbUpdateTasks } from './database.js';
+import { validateCalls, validateTasks } from './validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,9 +17,29 @@ const PORT = process.env.PORT || 3001;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const USE_DATABASE = !!process.env.DATABASE_URL;
 
+// Rate limiting configuration
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 update requests per windowMs
+  message: 'Too many update requests, please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+
+// Apply rate limiting to API routes
+app.use('/api/', apiLimiter);
 
 // Production'da build edilmiş frontend'i serve et
 if (IS_PRODUCTION) {
@@ -102,8 +124,22 @@ function broadcast(message) {
 }
 
 // WebSocket bağlantıları
-wss.on('connection', (ws) => {
-  console.log('New client connected');
+wss.on('connection', (ws, req) => {
+  console.log('New client connecting...');
+
+  // Simple token-based authentication (optional in development, required in production)
+  const token = req.headers['sec-websocket-protocol'] || req.url.split('?token=')[1];
+  const expectedToken = process.env.WS_AUTH_TOKEN;
+
+  // Only enforce authentication in production if token is set
+  if (IS_PRODUCTION && expectedToken && token !== expectedToken) {
+    console.log('❌ WebSocket authentication failed');
+    ws.close(1008, 'Authentication failed');
+    return;
+  }
+
+  console.log('✅ New client connected');
+  ws.isAuthenticated = true;
 
   // Yeni bağlanan cliente mevcut veriyi gönder
   ws.send(JSON.stringify({
@@ -116,14 +152,34 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message.toString());
       console.log('Received:', data.type);
 
+      // Verify authentication before processing
+      if (IS_PRODUCTION && expectedToken && !ws.isAuthenticated) {
+        ws.send(JSON.stringify({
+          type: 'ERROR',
+          message: 'Not authenticated'
+        }));
+        return;
+      }
+
       switch (data.type) {
         case 'UPDATE_CALLS':
-          appData.calls = data.calls;
+          // Validate input
+          const callsValidation = validateCalls(data.calls || []);
+          if (!callsValidation.valid) {
+            ws.send(JSON.stringify({
+              type: 'ERROR',
+              message: 'Validation failed',
+              details: callsValidation.errors
+            }));
+            return;
+          }
+
+          appData.calls = callsValidation.sanitized;
           appData.lastUpdated = Date.now();
 
-          // Database veya dosyaya kaydet
+          // Database veya dosyaya kaydet (use sanitized data)
           if (USE_DATABASE) {
-            dbUpdateCalls(data.calls).catch(err => console.error('DB update error:', err));
+            dbUpdateCalls(appData.calls).catch(err => console.error('DB update error:', err));
           } else {
             saveData();
           }
@@ -137,12 +193,23 @@ wss.on('connection', (ws) => {
           break;
 
         case 'UPDATE_TASKS':
-          appData.tasks = data.tasks;
+          // Validate input
+          const tasksValidation = validateTasks(data.tasks || []);
+          if (!tasksValidation.valid) {
+            ws.send(JSON.stringify({
+              type: 'ERROR',
+              message: 'Validation failed',
+              details: tasksValidation.errors
+            }));
+            return;
+          }
+
+          appData.tasks = tasksValidation.sanitized;
           appData.lastUpdated = Date.now();
 
-          // Database veya dosyaya kaydet
+          // Database veya dosyaya kaydet (use sanitized data)
           if (USE_DATABASE) {
-            dbUpdateTasks(data.tasks).catch(err => console.error('DB update error:', err));
+            dbUpdateTasks(appData.tasks).catch(err => console.error('DB update error:', err));
           } else {
             saveData();
           }
@@ -188,10 +255,24 @@ app.get('/api/calls', (req, res) => {
   res.json({ calls: appData.calls });
 });
 
-// Calls verilerini güncelle
-app.post('/api/calls', async (req, res) => {
+// Calls verilerini güncelle (strict rate limiting + validation)
+app.post('/api/calls', strictLimiter, async (req, res) => {
   try {
-    appData.calls = req.body.calls || [];
+    const incomingCalls = req.body.calls || [];
+
+    // Validate and sanitize input
+    const validation = validateCalls(incomingCalls);
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      });
+    }
+
+    // Use sanitized data
+    appData.calls = validation.sanitized;
     appData.lastUpdated = Date.now();
 
     // Database veya dosyaya kaydet
@@ -210,6 +291,7 @@ app.post('/api/calls', async (req, res) => {
 
     res.json({ success: true, data: appData });
   } catch (error) {
+    console.error('Error updating calls:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -219,10 +301,24 @@ app.get('/api/tasks', (req, res) => {
   res.json({ tasks: appData.tasks });
 });
 
-// Tasks verilerini güncelle
-app.post('/api/tasks', async (req, res) => {
+// Tasks verilerini güncelle (strict rate limiting + validation)
+app.post('/api/tasks', strictLimiter, async (req, res) => {
   try {
-    appData.tasks = req.body.tasks || [];
+    const incomingTasks = req.body.tasks || [];
+
+    // Validate and sanitize input
+    const validation = validateTasks(incomingTasks);
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      });
+    }
+
+    // Use sanitized data
+    appData.tasks = validation.sanitized;
     appData.lastUpdated = Date.now();
 
     // Database veya dosyaya kaydet
@@ -241,6 +337,7 @@ app.post('/api/tasks', async (req, res) => {
 
     res.json({ success: true, data: appData });
   } catch (error) {
+    console.error('Error updating tasks:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

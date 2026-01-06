@@ -49,7 +49,45 @@ async function initDatabase() {
       )
     `);
 
-    console.log('✅ Database tables initialized');
+    // Performance indexleri oluştur
+    // Calls tablosu için indexler
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_created_at ON calls(created_at DESC);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_result ON calls(result);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_city ON calls(city);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_industry ON calls(industry);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_call_date ON calls(call_date DESC);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_calls_is_favorite ON calls(is_favorite);
+    `);
+
+    // Tasks tablosu için indexler
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(date DESC);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tasks_person ON tasks(person);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tasks_date_time ON tasks(date DESC, start_time DESC);
+    `);
+
+    console.log('✅ Database tables and indexes initialized');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
   } finally {
@@ -86,13 +124,23 @@ async function getAllCalls() {
   }
 }
 
-// Calls'ları güncelle (tümünü sil ve yeniden ekle)
+// Calls'ları güncelle (UPSERT kullanarak - daha performanslı ve güvenli)
 async function updateCalls(calls) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('DELETE FROM calls');
 
+    // Önce mevcut ID'leri al
+    const existingIds = calls.map(c => c.id);
+
+    // Listede olmayan kayıtları sil
+    if (existingIds.length > 0) {
+      await client.query('DELETE FROM calls WHERE id NOT IN (' + existingIds.map((_, i) => `$${i + 1}`).join(',') + ')', existingIds);
+    } else {
+      await client.query('DELETE FROM calls');
+    }
+
+    // Her kaydı UPSERT ile ekle/güncelle
     for (const call of calls) {
       await client.query(`
         INSERT INTO calls (
@@ -100,6 +148,23 @@ async function updateCalls(calls) {
           contact_phone, new_contact_phone, industry, city, district, address_detail,
           call_date, call_time, result, notes, is_favorite
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        ON CONFLICT (id) DO UPDATE SET
+          created_at = EXCLUDED.created_at,
+          caller = EXCLUDED.caller,
+          company_name = EXCLUDED.company_name,
+          contact_person = EXCLUDED.contact_person,
+          contact_title = EXCLUDED.contact_title,
+          contact_phone = EXCLUDED.contact_phone,
+          new_contact_phone = EXCLUDED.new_contact_phone,
+          industry = EXCLUDED.industry,
+          city = EXCLUDED.city,
+          district = EXCLUDED.district,
+          address_detail = EXCLUDED.address_detail,
+          call_date = EXCLUDED.call_date,
+          call_time = EXCLUDED.call_time,
+          result = EXCLUDED.result,
+          notes = EXCLUDED.notes,
+          is_favorite = EXCLUDED.is_favorite
       `, [
         call.id,
         call.createdAt,
@@ -122,7 +187,7 @@ async function updateCalls(calls) {
     }
 
     await client.query('COMMIT');
-    console.log(`✅ Updated ${calls.length} calls`);
+    console.log(`✅ Upserted ${calls.length} calls`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error updating calls:', error);
@@ -152,18 +217,36 @@ async function getAllTasks() {
   }
 }
 
-// Tasks'ları güncelle (tümünü sil ve yeniden ekle)
+// Tasks'ları güncelle (UPSERT kullanarak - daha performanslı ve güvenli)
 async function updateTasks(tasks) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('DELETE FROM tasks');
 
+    // Önce mevcut ID'leri al
+    const existingIds = tasks.map(t => t.id);
+
+    // Listede olmayan kayıtları sil
+    if (existingIds.length > 0) {
+      await client.query('DELETE FROM tasks WHERE id NOT IN (' + existingIds.map((_, i) => `$${i + 1}`).join(',') + ')', existingIds);
+    } else {
+      await client.query('DELETE FROM tasks');
+    }
+
+    // Her kaydı UPSERT ile ekle/güncelle
     for (const task of tasks) {
       await client.query(`
         INSERT INTO tasks (
           id, person, date, start_time, end_time, task_type, description, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (id) DO UPDATE SET
+          person = EXCLUDED.person,
+          date = EXCLUDED.date,
+          start_time = EXCLUDED.start_time,
+          end_time = EXCLUDED.end_time,
+          task_type = EXCLUDED.task_type,
+          description = EXCLUDED.description,
+          status = EXCLUDED.status
       `, [
         task.id,
         task.person,
@@ -177,7 +260,7 @@ async function updateTasks(tasks) {
     }
 
     await client.query('COMMIT');
-    console.log(`✅ Updated ${tasks.length} tasks`);
+    console.log(`✅ Upserted ${tasks.length} tasks`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error updating tasks:', error);
